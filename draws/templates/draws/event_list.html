@@ -13,8 +13,7 @@
       <td>{{ event.name }}</td>
       <td>{{ event.called_count }}</td>
       <td class="actions">
-        <a href="{% url 'draws:event_admin' event.slug %}">Call panel</a>
-        <a href="{% url 'draws:loser_board' event.slug %}" target="_blank">Loser board</a>
+        <a href="{% url 'draws:board' event.slug %}">Open board</a>
       </td>
     </tr>
     {% empty %}

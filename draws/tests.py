@@ -47,3 +47,41 @@ class LoserBoardTests(TestCase):
         services.undo_last(self.event)
         call = services.add_number(self.event, "125")
         self.assertEqual(call.position, 1)
+
+    def test_clear_all_removes_every_call(self):
+        services.add_number(self.event, "125")
+        services.add_number(self.event, "044")
+        services.clear_all(self.event)
+        self.assertEqual(self.event.called_count, 0)
+
+
+class WinnerLogicTests(TestCase):
+    def setUp(self):
+        self.event = Event.objects.create(name="Test Draw", prize_interval=3)
+
+    def test_no_prize_interval_never_auto_wins(self):
+        event = Event.objects.create(name="No prizes")
+        self.assertFalse(services.is_auto_winner(event, 1))
+        self.assertFalse(services.is_auto_winner(event, 3))
+
+    def test_auto_winner_starts_at_first_call(self):
+        self.assertTrue(services.is_auto_winner(self.event, 1))
+        self.assertFalse(services.is_auto_winner(self.event, 2))
+        self.assertFalse(services.is_auto_winner(self.event, 3))
+        self.assertTrue(services.is_auto_winner(self.event, 4))
+        self.assertTrue(services.is_auto_winner(self.event, 7))
+
+    def test_effective_winner_falls_back_to_auto_rule(self):
+        call = services.add_number(self.event, "001")
+        self.assertTrue(services.effective_winner(self.event, call))
+        call2 = services.add_number(self.event, "002")
+        self.assertFalse(services.effective_winner(self.event, call2))
+
+    def test_toggle_winner_overrides_auto_rule(self):
+        services.add_number(self.event, "001")
+        call = services.add_number(self.event, "002")
+        self.assertFalse(services.effective_winner(self.event, call))
+        services.toggle_winner(self.event, call)
+        self.assertTrue(services.effective_winner(self.event, call))
+        services.toggle_winner(self.event, call)
+        self.assertFalse(services.effective_winner(self.event, call))

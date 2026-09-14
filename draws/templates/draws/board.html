@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ event.name }} — Loser Board</title>
+<style>
+  :root { --gap: 12px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #111;
+    color: #fff;
+  }
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 18px;
+    background: #1d1d1d;
+    border-bottom: 1px solid #444;
+  }
+  .back {
+    color: #ccc;
+    text-decoration: none;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid #555;
+    border-radius: 6px;
+  }
+  input {
+    width: 180px;
+    font-size: 24px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 2px solid #777;
+  }
+  button {
+    font-size: 18px;
+    font-weight: 700;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  #add { background: #fff; color: #111; }
+  #undo, #clear, #full { background: #3a3a3a; color: #fff; }
+  .count { margin-left: auto; font-size: 18px; opacity: .85; }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: var(--gap);
+    padding: 20px;
+  }
+  .num {
+    min-height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(32px, 4vw, 58px);
+    font-weight: 800;
+    background: #f4f4f4;
+    color: #111;
+    border-radius: 10px;
+    border: 3px solid #bbb;
+    user-select: none;
+    cursor: pointer;
+  }
+  .winner {
+    background: #36b65b;
+    color: #fff;
+    border-color: #79db94;
+  }
+  .hint {
+    text-align: center;
+    padding: 0 20px 18px;
+    opacity: .65;
+    font-size: 14px;
+  }
+  #msg {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #b91c1c;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+  #msg.show { opacity: 1; }
+  body.full .controls, body.full .hint { display: none; }
+  body.full #board { padding: 18px; }
+</style>
+</head>
+<body>
+  <div class="controls">
+    <a href="{% url 'draws:event_list' %}" class="back">&larr; Events</a>
+    <input id="entry" inputmode="numeric" autocomplete="off" placeholder="Enter number" autofocus>
+    <button id="add">ADD</button>
+    <button id="undo">UNDO</button>
+    <button id="full">FULLSCREEN</button>
+    <button id="clear">CLEAR</button>
+    <div class="count"><span id="total">0</span> called</div>
+  </div>
+
+  <main id="board"></main>
+  <div class="hint">
+    {% if event.prize_interval %}
+      Every {{ event.prize_interval }} calls (starting with the first) auto-highlights green.
+    {% endif %}
+    Click any number to toggle green manually.
+  </div>
+  <div id="msg"></div>
+  {% csrf_token %}
+
+<script>
+(function () {
+  const SLUG = "{{ event.slug|escapejs }}";
+  let state = {{ state_json|safe }};
+
+  const entry = document.getElementById('entry');
+  const board = document.getElementById('board');
+  const total = document.getElementById('total');
+  const msg = document.getElementById('msg');
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  function api(path, { method = 'GET', body } = {}) {
+    const headers = { 'X-CSRFToken': csrftoken };
+    if (body) headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    return fetch(`/${SLUG}/${path}`, { method, headers, body }).then(r => r.json());
+  }
+
+  function showError(text) {
+    msg.textContent = text;
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 2500);
+  }
+
+  function render() {
+    board.innerHTML = '';
+    state.calls.forEach(call => {
+      const tile = document.createElement('div');
+      tile.className = 'num' + (call.is_winner ? ' winner' : '');
+      tile.textContent = call.number;
+      tile.title = `Called #${call.position}`;
+      tile.addEventListener('click', () => {
+        api(`toggle/${call.id}/`, { method: 'POST' }).then(data => { state = data; render(); });
+      });
+      board.appendChild(tile);
+    });
+    total.textContent = state.total;
+  }
+
+  function addNumber() {
+    const value = entry.value.trim();
+    if (!value) return;
+    api('add/', { method: 'POST', body: `number=${encodeURIComponent(value)}` }).then(data => {
+      if (data.error) showError(data.error);
+      state = data;
+      render();
+      entry.value = '';
+      entry.focus();
+    });
+  }
+  document.getElementById('add').onclick = addNumber;
+  entry.addEventListener('keydown', e => { if (e.key === 'Enter') addNumber(); });
+
+  document.getElementById('undo').onclick = () => {
+    api('undo/', { method: 'POST' }).then(data => {
+      if (data.error) showError(data.error);
+      state = data;
+      render();
+      entry.focus();
+    });
+  };
+
+  document.getElementById('clear').onclick = () => {
+    if (!state.calls.length) return;
+    if (!confirm('Clear the entire loser board?')) return;
+    api('clear/', { method: 'POST' }).then(data => { state = data; render(); });
+  };
+
+  document.getElementById('full').onclick = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        document.body.classList.add('full');
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (_) {
+      document.body.classList.toggle('full');
+    }
+  };
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) document.body.classList.remove('full');
+  });
+
+  render();
+  setInterval(() => { api('state/').then(data => { state = data; render(); }); }, 3000);
+})();
+</script>
+</body>
+</html>

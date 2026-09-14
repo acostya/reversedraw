@@ -1,3 +1,4 @@
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
@@ -5,6 +6,12 @@ from django.utils.text import slugify
 class Event(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
+    prize_interval = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        help_text="Auto-highlight a winner every N calls, starting with the first (leave blank to disable).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -42,6 +49,12 @@ class CalledNumber(models.Model):
     number = models.CharField(max_length=20)
     position = models.PositiveIntegerField()
     called_at = models.DateTimeField(auto_now_add=True)
+    manual_winner = models.BooleanField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Overrides the auto-winner rule when set (True/False); unset falls back to it.",
+    )
 
     class Meta:
         ordering = ["position"]

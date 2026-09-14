@@ -1,10 +1,26 @@
+import json
+
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from . import services
-from .forms import CallNumberForm, EventForm
-from .models import Event
+from .forms import EventForm
+from .models import CalledNumber, Event
+
+
+def serialize_state(event):
+    calls = [
+        {
+            "id": call.id,
+            "number": call.number,
+            "position": call.position,
+            "is_winner": services.effective_winner(event, call),
+        }
+        for call in event.called_numbers
+    ]
+    return {"calls": calls, "total": len(calls)}
 
 
 def event_list(request):
@@ -18,53 +34,57 @@ def event_create(request):
         if form.is_valid():
             event = form.save()
             messages.success(request, f"Event '{event.name}' created.")
-            return redirect("draws:event_admin", slug=event.slug)
+            return redirect("draws:board", slug=event.slug)
     else:
         form = EventForm()
     return render(request, "draws/event_form.html", {"form": form})
 
 
-def event_admin(request, slug):
+def board(request, slug):
     event = get_object_or_404(Event, slug=slug)
-    form = CallNumberForm()
     return render(
         request,
-        "draws/event_admin.html",
-        {"event": event, "form": form, "calls": event.calls.order_by("-position")},
+        "draws/board.html",
+        {"event": event, "state_json": json.dumps(serialize_state(event))},
     )
 
 
-@require_POST
-def call_number(request, slug):
+@require_GET
+def board_state(request, slug):
     event = get_object_or_404(Event, slug=slug)
-    form = CallNumberForm(request.POST)
-    if form.is_valid():
-        try:
-            call = services.add_number(event, form.cleaned_data["number"])
-            messages.success(request, f"Called #{call.number}.")
-        except ValueError as exc:
-            messages.error(request, str(exc))
-    else:
-        messages.error(request, "Enter a valid ticket number.")
-    return redirect("draws:event_admin", slug=slug)
+    return JsonResponse(serialize_state(event))
 
 
 @require_POST
-def undo_last(request, slug):
+def board_add(request, slug):
     event = get_object_or_404(Event, slug=slug)
     try:
-        call = services.undo_last(event)
-        messages.success(request, f"Undid call for #{call.number}.")
+        services.add_number(event, request.POST.get("number", ""))
     except ValueError as exc:
-        messages.error(request, str(exc))
-    return redirect("draws:event_admin", slug=slug)
+        return JsonResponse({**serialize_state(event), "error": str(exc)})
+    return JsonResponse(serialize_state(event))
 
 
-def loser_board(request, slug):
+@require_POST
+def board_undo(request, slug):
     event = get_object_or_404(Event, slug=slug)
-    return render(request, "draws/loser_board.html", {"event": event, "calls": event.called_numbers})
+    try:
+        services.undo_last(event)
+    except ValueError as exc:
+        return JsonResponse({**serialize_state(event), "error": str(exc)})
+    return JsonResponse(serialize_state(event))
 
 
-def loser_board_fragment(request, slug):
+@require_POST
+def board_clear(request, slug):
     event = get_object_or_404(Event, slug=slug)
-    return render(request, "draws/_loser_board_fragment.html", {"event": event, "calls": event.called_numbers})
+    services.clear_all(event)
+    return JsonResponse(serialize_state(event))
+
+
+@require_POST
+def board_toggle(request, slug, call_id):
+    event = get_object_or_404(Event, slug=slug)
+    call = get_object_or_404(CalledNumber, event=event, pk=call_id)
+    services.toggle_winner(event, call)
+    return JsonResponse(serialize_state(event))
