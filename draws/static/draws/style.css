@@ -1,0 +1,124 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --accent: #d9622b;
+  --out: #7f1d1d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--accent);
+  color: #fff;
+}
+
+.site-header .brand {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 1.1rem;
+}
+
+.site-header button {
+  background: transparent;
+  border: 1px solid #fff;
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+}
+
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.messages { list-style: none; padding: 0; margin: 0 0 1rem; }
+.messages li {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+.messages .success { background: #dcfce7; color: #166534; }
+.messages .error { background: #fee2e2; color: #991b1b; }
+
+.button {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.button.danger { background: #fff; border-color: var(--out); color: var(--out); }
+
+table.event-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+table.event-table th, table.event-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+table.event-table .actions a { margin-right: 0.75rem; }
+
+.call-form { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.call-form input[type="text"], .call-form input[type="number"] {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 1rem;
+}
+
+.stats-bar {
+  display: flex;
+  gap: 1.5rem;
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.stat { display: flex; flex-direction: column; align-items: center; }
+.stat-value { font-size: 2rem; font-weight: 700; }
+.stat-label { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; }
+
+.loser-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.loser-board .ticket {
+  display: inline-block;
+  min-width: 3.2rem;
+  text-align: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--out);
+  color: #fff;
+}
+
+.loser-board .empty { color: var(--muted); }
+
+.history { padding-left: 1.25rem; }

@@ -1,0 +1,23 @@
+from django.db import transaction
+from django.db.models import Max
+
+from .models import CalledNumber
+
+
+def add_number(event, number):
+    number = number.strip()
+    if not number:
+        raise ValueError("Enter a ticket number.")
+    if event.calls.filter(number=number).exists():
+        raise ValueError(f"#{number} has already been called.")
+    with transaction.atomic():
+        last_position = event.calls.aggregate(m=Max("position"))["m"] or 0
+        return CalledNumber.objects.create(event=event, number=number, position=last_position + 1)
+
+
+def undo_last(event):
+    call = event.calls.order_by("-position").first()
+    if not call:
+        raise ValueError("No calls to undo.")
+    call.delete()
+    return call
