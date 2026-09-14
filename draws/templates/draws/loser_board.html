@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ event.name }} — Loser Board{% endblock %}
+{% block content %}
+<h1>{{ event.name }} — Loser Board</h1>
+<div id="loser-board-fragment">
+  {% include "draws/_loser_board_fragment.html" %}
+</div>
+<script src="{% static 'draws/poll.js' %}" data-target="loser-board-fragment" data-url="{% url 'draws:loser_board_fragment' event.slug %}"></script>
+{% endblock %}
