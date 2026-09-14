@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -8,13 +7,11 @@ from .forms import CallNumberForm, EventForm
 from .models import Event
 
 
-@login_required
 def event_list(request):
     events = Event.objects.all()
     return render(request, "draws/event_list.html", {"events": events})
 
 
-@login_required
 def event_create(request):
     if request.method == "POST":
         form = EventForm(request.POST)
@@ -27,7 +24,6 @@ def event_create(request):
     return render(request, "draws/event_form.html", {"form": form})
 
 
-@login_required
 def event_admin(request, slug):
     event = get_object_or_404(Event, slug=slug)
     form = CallNumberForm()
@@ -38,7 +34,6 @@ def event_admin(request, slug):
     )
 
 
-@login_required
 @require_POST
 def call_number(request, slug):
     event = get_object_or_404(Event, slug=slug)
@@ -54,7 +49,6 @@ def call_number(request, slug):
     return redirect("draws:event_admin", slug=slug)
 
 
-@login_required
 @require_POST
 def undo_last(request, slug):
     event = get_object_or_404(Event, slug=slug)
